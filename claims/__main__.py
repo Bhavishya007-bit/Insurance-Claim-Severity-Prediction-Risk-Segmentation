@@ -5,17 +5,13 @@ from pathlib import Path
 
 import joblib
 
-from .data import ingest, load_batch, read_csv, synthetic
+from .data import ingest, load_batch, read_csv
 from .model import predict, segment, train
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    demo = commands.add_parser("demo", help="Run clearly-labelled synthetic data")
-    demo.add_argument("--rows", type=int, default=5000)
-    demo.add_argument("--seed", type=int, default=42)
-    demo.add_argument("--output", default="outputs/demo")
     fit = commands.add_parser("train", help="Ingest and train on your own Allstate-format CSV")
     fit.add_argument("--csv", required=True)
     fit.add_argument("--source", required=True, help="Honest dataset name/provenance")
@@ -42,12 +38,7 @@ def main():
     if output.exists() and any(output.iterdir()):
         parser.error("Output directory is not empty; choose a new --output directory")
     output.mkdir(parents=True, exist_ok=True)
-    if args.command == "demo":
-        csv_path = output / "synthetic.csv"
-        synthetic(args.rows, args.seed).to_csv(csv_path, index=False)
-        source = "synthetic_demo"
-    else:
-        csv_path, source = Path(args.csv), args.source
+    csv_path, source = Path(args.csv), args.source
     db = output / "claims.sqlite"
     batch, quality = ingest(csv_path, db, source)
     (output / "quality.json").write_text(json.dumps(quality, indent=2))

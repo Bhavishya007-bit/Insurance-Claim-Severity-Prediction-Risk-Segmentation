@@ -5,9 +5,20 @@ import pandas as pd
 import pytest
 from sklearn.linear_model import LinearRegression
 
-from claims.data import ingest, load_batch, synthetic, validate
-from claims.features import FEATURES, FrequencyEncoder
+from claims.data import ingest, load_batch, validate
+from claims.features import CAT, NUM, FEATURES, FrequencyEncoder
 from claims.model import build_model, predict, segment, train
+
+
+def example_rows(n):
+    """Small deterministic test inputs; never used for project evaluation."""
+    index = np.arange(n)
+    frame = pd.DataFrame({c: np.where(index % 3 == 0, "A", "B") for c in CAT})
+    for j, col in enumerate(NUM):
+        frame[col] = (index + j + 1) / (n + j + 1)
+    frame["id"] = index + 1
+    frame["loss"] = 100.0 + index * 2
+    return frame
 
 
 def test_encoder_uses_training_only_and_handles_unknown_missing():
@@ -19,7 +30,7 @@ def test_encoder_uses_training_only_and_handles_unknown_missing():
 
 @pytest.mark.parametrize("bad", ["id_duplicate", "loss_missing", "negative_loss", "infinity", "bad_numeric", "missing_column", "record_duplicate"])
 def test_bad_inputs_rejected(bad):
-    frame = synthetic(30)
+    frame = example_rows(30)
     if bad == "id_duplicate": frame.loc[1, "id"] = frame.loc[0, "id"]
     if bad == "loss_missing": frame.loc[0, "loss"] = np.nan
     if bad == "negative_loss": frame.loc[0, "loss"] = -1
@@ -33,7 +44,7 @@ def test_bad_inputs_rejected(bad):
 
 def test_sql_roundtrip_idempotency_foreign_keys(tmp_path):
     csv, db = tmp_path / "input.csv", tmp_path / "claims.sqlite"
-    frame = synthetic(100)
+    frame = example_rows(100)
     frame.to_csv(csv, index=False)
     batch, report = ingest(csv, db, "test")
     assert report["rows"] == 100
@@ -49,7 +60,7 @@ def test_sql_roundtrip_idempotency_foreign_keys(tmp_path):
 
 
 def test_no_preprocessing_leakage_and_serialization(tmp_path):
-    frame = synthetic(100)
+    frame = example_rows(100)
     frame["cat1"] = "TRAIN"
     model = build_model(LinearRegression(), 100, 42).fit(frame[FEATURES], frame.loss)
     unseen = frame[FEATURES].copy()
@@ -65,11 +76,11 @@ def test_segment_boundaries():
 
 
 def test_full_training_has_disjoint_splits_and_original_unit_mae(tmp_path):
-    report = train(synthetic(200), tmp_path, "synthetic_demo")
+    report = train(example_rows(200), tmp_path, "unit_test_fixture")
     splits = pd.read_csv(tmp_path / "split_ids.csv")
     assert splits.id.is_unique and len(splits) == 200
     assert splits.groupby("split").size().to_dict() == {"test": 40, "train": 120, "validation": 40}
     preds = pd.read_csv(tmp_path / "test_predictions.csv")
     assert report["test"]["xgboost"]["mae"] == pytest.approx(abs(preds.loss - preds.xgboost).mean())
-    assert report["synthetic"] is True
+    assert report["source"] == "unit_test_fixture"
     assert len(report["severity_band_thresholds"]) == 2

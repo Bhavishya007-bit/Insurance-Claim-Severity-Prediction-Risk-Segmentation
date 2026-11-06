@@ -92,18 +92,3 @@ def load_batch(db_path, batch):
             "ON c.batch_id=f.batch_id AND c.claim_id=f.claim_id WHERE c.batch_id=? ORDER BY c.claim_id",
             conn, params=(batch,))
 
-
-def synthetic(n=5000, seed=42):
-    """Artificial data for smoke testing; NOT Allstate or a business benchmark."""
-    rng = np.random.default_rng(seed)
-    frame = pd.DataFrame({c: rng.choice(["A", "B", "C"], n, p=[.65, .25, .10]) for c in CAT})
-    for col in NUM:
-        frame[col] = rng.uniform(0, 1, n)
-    log_loss = (7 + 1.2 * (frame.cat1 == "C") + .8 * (frame.cont1 > .6)
-                + 1.4 * frame.cont2 ** 2 + .7 * frame.cont3 * frame.cont4
-                + rng.normal(0, .35, n))
-    frame["loss"] = np.expm1(log_loss)
-    frame.insert(0, "id", np.arange(1, n + 1))
-    frame.loc[rng.random(n) < .01, "cont5"] = np.nan
-    frame.loc[rng.random(n) < .01, "cat5"] = np.nan
-    return frame

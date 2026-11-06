@@ -2,7 +2,9 @@
 
 A reproducible Python + SQL project that predicts claim cost, compares linear regression with XGBoost, and groups claims into predicted severity bands.
 
-**Status:** implementation and synthetic demonstration available. The real Allstate benchmark has not been run. No 23% real-data improvement is claimed. This implementation was created with AI assistance in November 2026; its commit history is not evidence of a September project.
+**Status:** real Allstate data evaluated locally on 188,318 claims. The owner-provided evaluation reports a test MAE of 1,154.87 for XGBoost versus 1,283.90 for linear regression (10.05% reduction). These are local holdout results, not a Kaggle leaderboard score. Full local artifacts are not committed.
+
+Implementation created with AI assistance in November 2026.
 
 ## Quick start
 
@@ -14,10 +16,10 @@ python -m venv .venv
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 python -m pytest -q
-python -m claims demo --rows 5000 --output outputs/demo
+
 ```
 
-The demo generates **artificial records with 130 inputs**. It tests the workflow, not performance on real insurance claims. It writes SQL data, quality checks, fitted model, metrics, split IDs, predictions, and segment summaries. Use a new output directory for each experiment.
+Place the extracted Kaggle CSV files in `data/`, then use the training command below. The workflow saves SQL data, quality checks, fitted model, metrics, split IDs, predictions and segment summaries. Use a new output directory for each experiment.
 
 ## Real dataset
 
@@ -48,15 +50,13 @@ Only load model files you created or trust: joblib uses pickle. Data, databases,
 
 | File | Purpose |
 |---|---|
-| `claims/data.py` | Data contract, SQL ingestion and synthetic generator |
+| `claims/data.py` | Data contract and SQL ingestion |
 | `sql/schema.sql` | Relational keys and constraints |
 | `sql/analysis.sql` | Example SQL analyses |
 | `claims/features.py` | Frequency encoder and ColumnTransformer |
 | `claims/model.py` | Baselines, model selection, metrics and segmentation |
-| `claims/__main__.py` | Training, demo and prediction commands |
+| `claims/__main__.py` | Training and prediction commands |
 | `tests/test_pipeline.py` | Validation, leakage, SQL and end-to-end checks |
-| `reports/` | Measured synthetic demonstration results |
-| `docs/interview-guide.md` | Plain-English explanation and limitations |
 
 ## Evaluation and limitations
 

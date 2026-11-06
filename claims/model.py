@@ -109,7 +109,7 @@ def train(frame, output, source, seed=42):
         differences.append(float(np.mean(base_errors[idx] - xgb_errors[idx])))
     report = {
         "source": source, "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "synthetic": source == "synthetic_demo", "seed": seed,
+        "seed": seed,
         "rows": len(frame), "features": len(FEATURES),
         "split_counts": {"train": len(fit), "validation": len(valid), "test": len(test)},
         "validation": validation, "xgboost_candidates": candidates,
@@ -125,8 +125,7 @@ def train(frame, output, source, seed=42):
     joblib.dump({"model": xgb, "thresholds": thresholds, "features": FEATURES,
                  "source": source}, out / "model.joblib")
     lines = ["# Evaluation report", "", f"Data source: **{source}**", "",
-             "Synthetic data results are software demonstrations, not insurance benchmarks." if report["synthetic"]
-             else "Local holdout results; not a Kaggle leaderboard score.", "",
+             "Local holdout results; not a Kaggle leaderboard score.", "",
              f"Rows: {len(frame):,}; features: {len(FEATURES)}; split: 60%/20%/20%.", "",
              "| Model | Test MAE | Test RMSE | Test R² |", "|---|---:|---:|---:|"]
     for name, score in test_scores.items():
